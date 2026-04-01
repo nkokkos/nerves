@@ -13,7 +13,7 @@ defmodule Nerves.Artifact.Resolvers.URI do
   Download the artifact from an http location
   """
   @impl Nerves.Artifact.Resolver
-  def get({location, opts}) do
+  def get({location, opts}, dest_path) do
     Nerves.Utils.Shell.info("  => Trying #{location}")
 
     {query_params, opts} = Keyword.pop(opts, :query_params, %{})
@@ -23,6 +23,6 @@ defmodule Nerves.Artifact.Resolvers.URI do
       |> URI.parse()
       |> Map.put(:query, URI.encode_query(query_params))
 
-    Nerves.Utils.HTTPClient.get(uri, opts)
+    Nerves.Utils.HTTPClient.download(uri, dest_path, opts)
   end
 end

@@ -26,13 +26,13 @@ defmodule Nerves.Artifact.Resolvers.GithubAPI do
             username: ""
 
   @impl Nerves.Artifact.Resolver
-  def get({org_proj, opts}) do
+  def get({org_proj, opts}, dest_path) do
     opts =
       %{struct(__MODULE__, opts) | opts: opts, repo: org_proj}
       |> maybe_adjust_token()
       |> add_http_opts()
 
-    fetch_artifact(opts)
+    fetch_artifact(dest_path, opts)
   end
 
   defp add_http_opts(opts) do
@@ -67,18 +67,16 @@ defmodule Nerves.Artifact.Resolvers.GithubAPI do
     end
   end
 
-  defp fetch_artifact(opts) do
+  defp fetch_artifact(dest_path, opts) do
     info = if System.get_env("NERVES_DEBUG") == "1", do: opts.url, else: opts.artifact_name
 
     Shell.info(["  [GitHub] ", info])
 
     with {:ok, assets_or_url} <- release_details(opts),
          {:ok, asset_url} <- get_asset_url(assets_or_url, opts) do
-      http_opts =
-        Keyword.take(opts.opts, [:into])
-        |> Keyword.put(:headers, [{"Accept", "application/octet-stream"} | opts.headers])
+      http_opts = [headers: [{"Accept", "application/octet-stream"} | opts.headers]]
 
-      HTTPClient.get(asset_url, http_opts)
+      HTTPClient.download(asset_url, dest_path, http_opts)
     end
   end
 
@@ -121,13 +119,14 @@ defmodule Nerves.Artifact.Resolvers.GithubAPI do
     end
   end
 
-  defp get_asset_url(url, _) when is_binary(url), do: {:ok, url}
+  defp get_asset_url(url, _opts) when is_binary(url), do: {:ok, url}
 
   defp get_asset_url(%{"assets" => []}, _opts) do
     {:error, "No release artifacts"}
   end
 
-  defp get_asset_url(%{"assets" => assets}, %{artifact_name: artifact_name}) do
+  defp get_asset_url(%{"assets" => assets}, %{artifact_name: artifact_name})
+       when is_list(assets) do
     ret =
       Enum.find(assets, fn %{"name" => name} ->
         String.equivalent?(artifact_name, name)
@@ -143,5 +142,10 @@ defmodule Nerves.Artifact.Resolvers.GithubAPI do
       %{"url" => url} ->
         {:ok, url}
     end
+  end
+
+  defp get_asset_url(response, _opts) do
+    truncated = inspect(response, limit: 10, printable_limit: 200)
+    {:error, "Unexpected API response when querying assets: #{truncated}"}
   end
 end

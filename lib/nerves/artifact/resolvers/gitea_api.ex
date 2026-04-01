@@ -21,13 +21,13 @@ defmodule Nerves.Artifact.Resolvers.GiteaAPI do
             url: nil
 
   @impl Nerves.Artifact.Resolver
-  def get({repo, opts}) do
+  def get({repo, opts}, dest_path) do
     opts =
       %{struct(__MODULE__, opts) | opts: opts, repo: repo}
       |> maybe_adjust_token()
       |> add_http_opts()
 
-    fetch_artifact(opts)
+    fetch_artifact(dest_path, opts)
   end
 
   defp add_http_opts(opts) do
@@ -70,18 +70,16 @@ defmodule Nerves.Artifact.Resolvers.GiteaAPI do
     end
   end
 
-  defp fetch_artifact(opts) do
+  defp fetch_artifact(dest_path, opts) do
     info = if System.get_env("NERVES_DEBUG") == "1", do: opts.url, else: opts.artifact_name
 
     Shell.info(["  [Gitea] ", info])
 
     with {:ok, assets_or_url} <- release_details(opts),
          {:ok, asset_url} <- get_asset_url(assets_or_url, opts) do
-      http_opts =
-        Keyword.take(opts.opts, [:into])
-        |> Keyword.put(:headers, [{"Accept", "application/octet-stream"} | opts.headers])
+      http_opts = [headers: [{"Accept", "application/octet-stream"} | opts.headers]]
 
-      HTTPClient.get(asset_url, http_opts)
+      HTTPClient.download(asset_url, dest_path, http_opts)
     end
   end
 
@@ -110,8 +108,8 @@ defmodule Nerves.Artifact.Resolvers.GiteaAPI do
 
         {:error, msg}
 
-      result ->
-        result
+      {:error, reason} ->
+        {:error, reason}
     end
   end
 

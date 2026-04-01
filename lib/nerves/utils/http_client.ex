@@ -33,11 +33,55 @@ defmodule Nerves.Utils.HTTPClient do
         }
 
   @doc """
+  Download a file from a URL
+
+  This is a download utility that uses `get/2` to save large files
+  to disk.
+
+  It takes the same options as `get/2` with the exceptions that `:into` is ignored and
+  `:progress?` is set automatically if left unspecified.
+
+  Returns `:ok` or `{:error, reason}`.
+  """
+  @spec download(URI.t() | String.t(), Path.t(), keyword()) :: :ok | {:error, atom() | String.t()}
+  def download(url, dest_path, opts \\ []) do
+    tmp_path = dest_path <> ".tmp"
+
+    progress? =
+      if Keyword.has_key?(opts, :progress?),
+        do: opts[:progress?],
+        else: progress_enabled?() and interactive_terminal?()
+
+    # Raise early if either the tmp or destination path can't be written.
+    File.touch!(tmp_path)
+    File.touch!(dest_path)
+
+    # Remove the dest_path to avoid any confusion on errors or interruptions
+    File.rm!(dest_path)
+
+    opts =
+      opts
+      |> Keyword.put(:into, File.stream!(tmp_path))
+      |> Keyword.put(:progress?, progress?)
+
+    case get(url, opts) do
+      {:ok, _} ->
+        File.rename!(tmp_path, dest_path)
+        :ok
+
+      {:error, _} = error ->
+        _ = File.rm(tmp_path)
+        error
+    end
+  end
+
+  @doc """
   Make an HTTP GET request and collect the response body.
 
-  The `:into` option accepts any `Collectable.t()`. Defaults to `""` which
-  collects the response into a string. Pass a `File.Stream` to write directly
-  to a file.
+  Options:
+  * `:into` - a `Collectable.t()` for receiving the results. Defaults to `""`
+  * `:progress?` - set to `true` to show a progress bar. Defaults to `false`
+  * `:headers` - a list of additional HTTP headers to include
 
   Returns `{:ok, collected}` or `{:error, reason}`.
   """
@@ -79,8 +123,7 @@ defmodule Nerves.Utils.HTTPClient do
   end
 
   defp start_request(url, opts, redirects) do
-    progress? =
-      Keyword.get(opts, :progress?, true) and progress_enabled?() and interactive_terminal?()
+    progress? = Keyword.get(opts, :progress?, false)
 
     into = Keyword.get(opts, :into, "")
     {acc, collector} = Collectable.into(into)
@@ -220,7 +263,7 @@ defmodule Nerves.Utils.HTTPClient do
 
   defp put_progress(%{progress?: true} = state, size) do
     max = state.content_length
-    fraction = size / max
+    fraction = if max > 0, do: size / max, else: 0
     completed = trunc(fraction * @progress_steps)
     percent = trunc(fraction * 100)
     unfilled = @progress_steps - completed

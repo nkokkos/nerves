@@ -7,7 +7,7 @@
 defmodule Nerves.Artifact.Resolver do
   @moduledoc false
 
-  @callback get(tuple()) :: {:ok, term()} | {:error, term}
+  @callback get(tuple(), Path.t()) :: :ok | {:error, term}
 
   @spec get(list(), pkg :: Nerves.Package.t()) :: {:ok, path :: Path.t()} | {:error, term}
   def get([], _pkg) do
@@ -24,18 +24,13 @@ defmodule Nerves.Artifact.Resolver do
 
   defp do_get([{resolver, {id, resolver_opts}} | resolvers], pkg, raise_reason) do
     file = Nerves.Artifact.download_path(pkg)
-    tmp_file = file <> ".tmp"
     File.mkdir_p!(Nerves.Env.download_dir())
 
-    resolver_opts = Keyword.put(resolver_opts, :into, File.stream!(tmp_file))
-
-    case resolver.get({id, resolver_opts}) do
-      {:ok, _} ->
-        File.rename!(tmp_file, file)
+    case resolver.get({id, resolver_opts}, file) do
+      :ok ->
         validate_and_continue(file, resolvers, pkg)
 
       {:error, reason} ->
-        _ = File.rm(tmp_file)
         handle_error(reason, resolvers, pkg, raise_reason)
     end
   end

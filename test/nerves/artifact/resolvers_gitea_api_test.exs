@@ -3,13 +3,24 @@
 # SPDX-License-Identifier: Apache-2.0
 #
 defmodule Nerves.Artifact.Resolvers.GiteaAPITest do
-  use ExUnit.Case, async: true
+  use ExUnit.Case
   use Mimic
 
   alias Nerves.Artifact.Resolvers.GiteaAPI
   alias Nerves.Utils.HTTPClient
 
+  # These are just markers for easier debug. Files should never be created since the HTTP downloader is mocked.
+  @invalid_download_path "/should_not_work.tgz"
+  @good_download_path "good_path.tar.gz"
+
+  @no_artifacts_response Jason.encode!(%{assets: []})
+
   setup do
+    # Clean up any environment settings that affect tests. This should never
+    # be specified by the user for any testing so there's no need to save and
+    # restore the values.
+    System.delete_env("GITEA_TOKEN")
+
     %{
       repo: "jmshrtn/nerves_artifact_test",
       opts: [
@@ -29,13 +40,14 @@ defmodule Nerves.Artifact.Resolvers.GiteaAPITest do
       |> Keyword.put(:public?, true)
       |> Keyword.delete(:token)
 
-    assert GiteaAPI.get({context.repo, opts}) == {:error, "No release"}
+    assert GiteaAPI.get({context.repo, opts}, @invalid_download_path) == {:error, "No release"}
   end
 
   test "private release not found", context do
     HTTPClient |> expect(:get, fn _url, _opts -> {:error, "Status 404 Not Found"} end)
 
-    assert GiteaAPI.get({context.repo, context.opts}) == {:error, "No release"}
+    assert GiteaAPI.get({context.repo, context.opts}, @invalid_download_path) ==
+             {:error, "No release"}
   end
 
   test "private release fails without token", context do
@@ -43,7 +55,7 @@ defmodule Nerves.Artifact.Resolvers.GiteaAPITest do
 
     opts = Keyword.delete(context.opts, :token)
 
-    assert {:error, msg} = GiteaAPI.get({context.repo, opts})
+    assert {:error, msg} = GiteaAPI.get({context.repo, opts}, @invalid_download_path)
 
     assert msg == """
            Missing token
@@ -61,7 +73,7 @@ defmodule Nerves.Artifact.Resolvers.GiteaAPITest do
 
     opts = Keyword.put(context.opts, :token, nil)
 
-    assert {:error, msg} = GiteaAPI.get({context.repo, opts})
+    assert {:error, msg} = GiteaAPI.get({context.repo, opts}, @invalid_download_path)
 
     assert msg == """
            Missing token
@@ -77,8 +89,9 @@ defmodule Nerves.Artifact.Resolvers.GiteaAPITest do
   test "mismatched checksum", context do
     details = Jason.encode!(%{assets: [%{name: "howdy.tar.xz"}]})
     HTTPClient |> expect(:get, fn _url, _opts -> {:ok, details} end)
+    reject(&HTTPClient.download/3)
 
-    assert {:error, msg} = GiteaAPI.get({context.repo, context.opts})
+    assert {:error, msg} = GiteaAPI.get({context.repo, context.opts}, @invalid_download_path)
 
     assert msg == [
              "No artifact with valid checksum\n\n     Found:\n",
@@ -87,10 +100,11 @@ defmodule Nerves.Artifact.Resolvers.GiteaAPITest do
   end
 
   test "no artifacts in release", context do
-    no_artifacts = Jason.encode!(%{assets: []})
-    HTTPClient |> expect(:get, fn _url, _opts -> {:ok, no_artifacts} end)
+    HTTPClient |> expect(:get, fn _url, _opts -> {:ok, @no_artifacts_response} end)
+    reject(&HTTPClient.download/3)
 
-    assert {:error, "No release artifacts"} = GiteaAPI.get({context.repo, context.opts})
+    assert {:error, "No release artifacts"} =
+             GiteaAPI.get({context.repo, context.opts}, @invalid_download_path)
   end
 
   test "valid artifact", context do
@@ -109,12 +123,13 @@ defmodule Nerves.Artifact.Resolvers.GiteaAPITest do
       assert url == expected_details_url
       {:ok, details}
     end)
-    |> expect(:get, fn url, _opts ->
+    |> expect(:download, 1, fn url, path, _opts ->
       assert url == artifact_url
-      {:ok, "artifact data!"}
+      assert path == @good_download_path
+      :ok
     end)
 
-    assert {:ok, "artifact data!"} = GiteaAPI.get({context.repo, context.opts})
+    assert :ok = GiteaAPI.get({context.repo, context.opts}, @good_download_path)
   end
 
   test "GITEA_TOKEN takes precedence", context do
@@ -127,11 +142,14 @@ defmodule Nerves.Artifact.Resolvers.GiteaAPITest do
     |> expect(:get, fn _url, opts ->
       [{"Authorization", "token " <> req_token}] = opts[:headers]
       assert req_token == env_token
-      :ok
+      {:ok, @no_artifacts_response}
     end)
 
     System.put_env("GITEA_TOKEN", env_token)
-    _ = GiteaAPI.get({context.repo, context.opts})
+
+    {:error, "No release artifacts"} =
+      GiteaAPI.get({context.repo, context.opts}, @invalid_download_path)
+
     System.delete_env("GITEA_TOKEN")
   end
 end
