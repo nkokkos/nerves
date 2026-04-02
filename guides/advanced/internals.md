@@ -80,4 +80,4 @@ you produce a system directly using Buildroot and want to force Nerves to use it
 
 ### nerves_system/.nerves/artifacts/nerves_system_*
    * "package" directory
-   * Gets fetched from nerves_env.exs artifact_url
+   * Gets fetched from nerves_env.exs artifact_sites

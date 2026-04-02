@@ -256,29 +256,11 @@ defmodule Nerves.Artifact do
   ```
   """
   @spec expand_sites(Nerves.Package.t()) :: [
-          {Resolvers.URI | Resolvers.GithubAPI, {Path.t(), Keyword.t()}}
+          {Resolvers.URI | Resolvers.GithubAPI | Resolvers.GiteaAPI, {Path.t(), Keyword.t()}}
         ]
   def expand_sites(pkg) do
-    case pkg.config[:artifact_url] do
-      nil ->
-        Keyword.get(pkg.config, :artifact_sites, [])
-        |> Enum.map(&expand_site(&1, pkg))
-
-      urls when is_list(urls) ->
-        # artifact_url is deprecated and this code can be removed sometime following
-        # nerves 1.0
-        if Enum.any?(urls, &(!is_binary(&1))) do
-          Mix.raise("""
-          artifact_urls can only be strings.
-          Please use artifact_sites instead.
-          """)
-        end
-
-        urls
-
-      _invalid ->
-        Mix.raise("Invalid artifact_url. Please use artifact_sites instead")
-    end
+    Keyword.get(pkg.config, :artifact_sites, [])
+    |> Enum.map(&expand_site(&1, pkg))
   end
 
   @doc """

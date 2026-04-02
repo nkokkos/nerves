@@ -76,12 +76,6 @@ defmodule Nerves.ArtifactTest do
     end)
   end
 
-  test "artifact_urls can only be binaries" do
-    assert_raise Mix.Error, fn ->
-      Artifact.expand_sites(%{config: [artifact_url: [{:broken}]]})
-    end
-  end
-
   test "checksum short length" do
     in_fixture("system", fn ->
       File.cwd!()
