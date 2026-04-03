@@ -58,7 +58,7 @@ defmodule Mix.Nerves.Preflight do
   def ensure_fwup_version!(fwup_bin \\ "fwup", vsn_requirement \\ @fwup_semver) do
     ensure_available!(fwup_bin)
 
-    case Nerves.Port.cmd(fwup_bin, ["--version"]) do
+    case System.cmd(fwup_bin, ["--version"]) do
       {vsn, 0} ->
         vsn = String.trim(vsn)
         {:ok, req} = Version.parse_requirement(vsn_requirement)

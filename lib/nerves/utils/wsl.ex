@@ -92,7 +92,7 @@ defmodule Nerves.Utils.WSL do
   """
   @spec path_accessible_in_windows?(String.t(), boolean()) :: boolean()
   def path_accessible_in_windows?(file, true = _use_wslpath) do
-    {_path, exitcode} = Nerves.Port.cmd("wslpath", ["-w", "-a", file], stderr_to_stdout: true)
+    {_path, exitcode} = System.cmd("wslpath", ["-w", "-a", file], stderr_to_stdout: true)
     exitcode == 0
   end
 
@@ -105,7 +105,7 @@ defmodule Nerves.Utils.WSL do
   """
   @spec get_temp_file_location(String.t()) :: String.t()
   def get_temp_file_location(file) do
-    {win_path, 0} = Nerves.Port.cmd("cmd.exe", ["/c", "echo %TEMP%"])
+    {win_path, 0} = System.cmd("cmd.exe", ["/c", "echo %TEMP%"])
     "#{String.trim(win_path)}\\#{Path.basename(file)}"
   end
 
@@ -225,7 +225,7 @@ defmodule Nerves.Utils.WSL do
   """
   @spec execute_wslpath(String.t(), [String.t()]) :: String.t() | nil
   def execute_wslpath(file, arguments) do
-    case Nerves.Port.cmd("wslpath", arguments ++ [file], stderr_to_stdout: true) do
+    case System.cmd("wslpath", arguments ++ [file], stderr_to_stdout: true) do
       {path, 0} ->
         String.trim(path)
 

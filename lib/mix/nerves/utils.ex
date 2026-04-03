@@ -53,7 +53,7 @@ defmodule Mix.Nerves.Utils do
       if WSL.running_on_wsl?() do
         WSL.get_fwup_devices()
       else
-        Nerves.Port.cmd("fwup", ["--detect"])
+        System.cmd("fwup", ["--detect"])
       end
 
     if result == "" do

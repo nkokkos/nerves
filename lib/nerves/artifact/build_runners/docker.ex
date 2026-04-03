@@ -332,17 +332,17 @@ defmodule Nerves.Artifact.BuildRunners.Docker do
   end
 
   defp uid() do
-    {uid, _} = Nerves.Port.cmd("id", ["-u"])
+    {uid, _} = System.cmd("id", ["-u"])
     String.trim(uid)
   end
 
   defp gid() do
-    {gid, _} = Nerves.Port.cmd("id", ["-g"])
+    {gid, _} = System.cmd("id", ["-g"])
     String.trim(gid)
   end
 
   defp end_of_build_log() do
-    {lines, _rc} = Nerves.Port.cmd("tail", ["-16", build_log_path()])
+    {lines, _rc} = System.cmd("tail", ["-16", build_log_path()])
     lines
   end
 
@@ -381,7 +381,7 @@ defmodule Nerves.Artifact.BuildRunners.Docker do
   end
 
   defp host_check() do
-    case Nerves.Port.cmd("docker", ["--version"]) do
+    case System.cmd("docker", ["--version"]) do
       {result, 0} ->
         <<"Docker version ", vsn::binary>> = result
         {:ok, vsn} = parse_docker_version(vsn)
