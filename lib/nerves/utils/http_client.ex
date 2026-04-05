@@ -141,10 +141,10 @@ defmodule Nerves.Utils.HTTPClient do
         autoredirect: false,
         ssl: [
           verify: :verify_peer,
-          cacertfile: CAStore.file_path(),
+          cacerts: :public_key.cacerts_get(),
           depth: 3,
           customize_hostname_check: [
-            {:match_fun, :public_key.pkix_verify_hostname_match_fun(:https)}
+            match_fun: :public_key.pkix_verify_hostname_match_fun(:https)
           ]
         ]
       ]
