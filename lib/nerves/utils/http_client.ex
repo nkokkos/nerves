@@ -11,8 +11,6 @@
 defmodule Nerves.Utils.HTTPClient do
   @moduledoc false
 
-  alias Nerves.Utils.Proxy
-
   @progress_steps 50
   @max_redirects 5
 
@@ -147,7 +145,7 @@ defmodule Nerves.Utils.HTTPClient do
           ]
         ]
       ]
-      |> Keyword.merge(Proxy.request_options(url))
+      |> Keyword.merge(proxy_request_options(url))
 
     {:ok, request_ref} =
       :httpc.request(
@@ -242,9 +240,55 @@ defmodule Nerves.Utils.HTTPClient do
         max_pipeline_length: 4,
         keep_alive_timeout: 120_000,
         pipeline_timeout: 60_000
-      ] ++ Proxy.httpc_options()
+      ] ++ proxy_httpc_options()
 
     :ok = :httpc.set_options(opts, :nerves)
+  end
+
+  @doc false
+  @spec proxy_request_options(String.t()) :: keyword()
+  def proxy_request_options(url) do
+    case URI.parse(url) do
+      %URI{scheme: "http"} -> proxy_auth("HTTP_PROXY")
+      %URI{scheme: "https"} -> proxy_auth("HTTPS_PROXY")
+      _ -> []
+    end
+  end
+
+  @doc false
+  @spec proxy_httpc_options() :: keyword()
+  def proxy_httpc_options() do
+    add_httpc_proxy(:proxy, "HTTP_PROXY") ++ add_httpc_proxy(:https_proxy, "HTTPS_PROXY")
+  end
+
+  defp proxy_auth(env_key) do
+    case parse_proxy_env(env_key) do
+      %URI{userinfo: auth} when is_binary(auth) ->
+        destructure [user, pass], String.split(auth, ":", parts: 2)
+        user = String.to_charlist(user)
+        pass = String.to_charlist(pass || "")
+        [proxy_auth: {user, pass}]
+
+      _ ->
+        []
+    end
+  end
+
+  defp add_httpc_proxy(key, env_key) do
+    case parse_proxy_env(env_key) do
+      %URI{host: host, port: port} when is_binary(host) and is_integer(port) ->
+        [{key, {{String.to_charlist(host), port}, []}}]
+
+      _ ->
+        []
+    end
+  end
+
+  defp parse_proxy_env(key) do
+    case System.get_env(key) do
+      nil -> nil
+      uri -> URI.parse(uri)
+    end
   end
 
   defp progress_enabled?() do

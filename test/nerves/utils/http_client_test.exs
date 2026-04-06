@@ -4,10 +4,10 @@
 #
 # SPDX-License-Identifier: Apache-2.0
 #
-defmodule Nerves.UtilsTest do
+defmodule Nerves.Utils.HTTPClientTest do
   use NervesTest.Case
 
-  alias Nerves.Utils.Proxy
+  alias Nerves.Utils.HTTPClient
 
   setup do
     _ = :inets.start(:httpc, profile: :nerves)
@@ -22,47 +22,51 @@ defmodule Nerves.UtilsTest do
   end
 
   test "proxy config returns no credentials when no proxy supplied" do
-    assert Proxy.request_options("http://nerves-project.org") == []
-    assert Proxy.httpc_options() == []
+    assert HTTPClient.proxy_request_options("http://nerves-project.org") == []
+    assert HTTPClient.proxy_httpc_options() == []
   end
 
   test "proxy config returns http_proxy credentials when supplied" do
     System.put_env("HTTP_PROXY", "http://nerves:test@example.com")
 
-    assert Proxy.request_options("http://nerves-project.org") == [
+    assert HTTPClient.proxy_request_options("http://nerves-project.org") == [
              proxy_auth: {~c"nerves", ~c"test"}
            ]
 
-    assert Proxy.httpc_options() == [{:proxy, {{~c"example.com", 80}, []}}]
+    assert HTTPClient.proxy_httpc_options() == [{:proxy, {{~c"example.com", 80}, []}}]
   end
 
   test "proxy config returns http_proxy credentials when only username supplied" do
     System.put_env("HTTP_PROXY", "http://nopass@example.com")
-    assert Proxy.request_options("http://nerves-project.org") == [proxy_auth: {~c"nopass", ~c""}]
-    assert Proxy.httpc_options() == [{:proxy, {{~c"example.com", 80}, []}}]
+
+    assert HTTPClient.proxy_request_options("http://nerves-project.org") == [
+             proxy_auth: {~c"nopass", ~c""}
+           ]
+
+    assert HTTPClient.proxy_httpc_options() == [{:proxy, {{~c"example.com", 80}, []}}]
   end
 
   test "proxy config returns credentials when the protocol is https" do
     System.put_env("HTTPS_PROXY", "https://test:nerves@example.com")
 
-    assert Proxy.request_options("https://nerves-project.org") == [
+    assert HTTPClient.proxy_request_options("https://nerves-project.org") == [
              proxy_auth: {~c"test", ~c"nerves"}
            ]
 
-    assert Proxy.httpc_options() == [{:https_proxy, {{~c"example.com", 443}, []}}]
+    assert HTTPClient.proxy_httpc_options() == [{:https_proxy, {{~c"example.com", 443}, []}}]
   end
 
   test "proxy config returns empty list when no credentials supplied" do
     System.put_env("HTTP_PROXY", "http://example.com:123")
-    assert Proxy.request_options("http://nerves-project.org") == []
-    assert Proxy.httpc_options() == [{:proxy, {{~c"example.com", 123}, []}}]
+    assert HTTPClient.proxy_request_options("http://nerves-project.org") == []
+    assert HTTPClient.proxy_httpc_options() == [{:proxy, {{~c"example.com", 123}, []}}]
   end
 
   test "proxy config returns both http and https" do
     System.put_env("HTTP_PROXY", "http://test:nerves@http_proxy.com")
     System.put_env("HTTPS_PROXY", "https://test:nerves@https_proxy.com")
 
-    assert Proxy.httpc_options() == [
+    assert HTTPClient.proxy_httpc_options() == [
              {:proxy, {{~c"http_proxy.com", 80}, []}},
              {:https_proxy, {{~c"https_proxy.com", 443}, []}}
            ]
