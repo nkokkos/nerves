@@ -197,7 +197,7 @@ defmodule NervesTest.Case do
 
   @spec tmp_path() :: Path.t()
   def tmp_path() do
-    Path.expand("../../test_tmp", __DIR__)
+    Path.expand("../../tmp", __DIR__)
   end
 
   @spec tmp_path(Path.extname()) :: Path.t()
