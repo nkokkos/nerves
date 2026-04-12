@@ -228,7 +228,7 @@ The following keys are supported:
 
     ```elixir
     {:github_releases, "organization/project"}
-    {:github_api, "organization/project", username: System.get_env("GITHUB_USER"), token: System.get_env("GITHUB_TOKEN"), tag: @version}
+    {:github_api, "organization/project", token: System.get_env("GITHUB_TOKEN"), tag: @version}
     {:prefix, "http://myserver.com/artifacts"}
     {:prefix, "file:///my_artifacts/"}
     {:prefix, "/users/my_user/artifacts/"}
@@ -241,10 +241,10 @@ The following keys are supported:
 
     For an artifact site that uses GitHub Releases in a private repo, [create a
     personal access token](https://help.github.com/en/articles/creating-a-personal-access-token-for-the-command-line)
-    and use `:github_api` with `username`, `token`, and `tag` options:
+    and use `:github_api` with `token` and `tag` options:
 
     ```elixir
-    {:github_api, "owner/repo", username: "skroob", token: "1234567", tag: "v0.1.0"}
+    {:github_api, "owner/repo", token: "1234567", tag: "v0.1.0"}
     ```
 
     Artifact sites can pass options as a third parameter for adding headers

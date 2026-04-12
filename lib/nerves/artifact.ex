@@ -237,10 +237,10 @@ defmodule Nerves.Artifact do
   Artifact sites can pass options as a third parameter for adding headers
   or query string parameters. For example, if you are trying to resolve
   artifacts hosted in a private Github repo, use `:github_api` and
-  pass a user, tag, and personal access token into the sites helper:
+  pass a tag and personal access token into the sites helper:
 
   ```elixir
-  {:github_api, "owner/repo", username: "skroob", token: "1234567", tag: "v0.1.0"}
+  {:github_api, "owner/repo", token: "1234567", tag: "v0.1.0"}
   ```
 
   Or pass query parameters for the URL:
@@ -419,7 +419,7 @@ defmodule Nerves.Artifact do
 
       Supported artifact sites:
       {:github_releases, "owner/repo"}
-      {:github_api, "owner/repo", username: "skroob", token: "1234567", tag: "v0.1.0"}
+      {:github_api, "owner/repo", token: "1234567", tag: "v0.1.0"}
       {:gitea_releases, "host/owner/repo"},
       {:gitea_api, "owner/repo", base_url: "https://gitea.com", token: "123456", tag: "v0.1.0"}
       {:prefix, "http://myserver.com/artifacts"}

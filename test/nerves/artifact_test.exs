@@ -107,6 +107,26 @@ defmodule Nerves.ArtifactTest do
     assert String.ends_with?(opts[:artifact_name], checksum_short <> Artifact.ext(pkg))
   end
 
+  test "GitHub API artifact sites are expanded" do
+    repo = "nerves-project/system"
+
+    pkg = %{
+      app: "my_system",
+      version: "1.0.0",
+      path: "./",
+      config: [
+        artifact_sites: [{:github_api, repo, token: "ghp_fake123", tag: "v1.0.0"}]
+      ]
+    }
+
+    checksum_short = Nerves.Artifact.checksum(pkg, short: 7)
+
+    [{GithubAPI, {^repo, opts}}] = Artifact.expand_sites(pkg)
+    assert opts[:token] == "ghp_fake123"
+    assert opts[:tag] == "v1.0.0"
+    assert String.ends_with?(opts[:artifact_name], checksum_short <> Artifact.ext(pkg))
+  end
+
   test "Gitea artifact sites are expanded" do
     repo = "gitea.com/jmshrtn/nerves_artifact_test"
 

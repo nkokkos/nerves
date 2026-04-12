@@ -22,8 +22,7 @@ defmodule Nerves.Artifact.Resolvers.GithubAPI do
             repo: nil,
             tag: "",
             token: "",
-            url: nil,
-            username: ""
+            url: nil
 
   @impl Nerves.Artifact.Resolver
   def get({org_proj, opts}, dest_path) do
@@ -40,13 +39,8 @@ defmodule Nerves.Artifact.Resolvers.GithubAPI do
       if opts.public? do
         []
       else
-        # make safe values here in case nil was supplied as an option
-        # The request will fail and error will be reported later on
-        user = opts.username || ""
         token = opts.token || ""
-
-        credentials = Base.encode64(user <> ":" <> token)
-        [{"Authorization", "Basic " <> credentials}]
+        [{"Authorization", "Bearer " <> token}]
       end
 
     %{

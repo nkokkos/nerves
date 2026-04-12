@@ -130,6 +130,22 @@ defmodule Nerves.Artifact.Resolvers.GithubAPITest do
     assert :ok = GithubAPI.get({context.repo, context.opts}, @good_download_path)
   end
 
+  test "username is ignored for backward compatibility", context do
+    opts = Keyword.put(context.opts, :username, "old_basic_auth_username")
+
+    HTTPClient
+    |> expect(:get, fn _url, opts ->
+      [{"Authorization", "Bearer " <> req_token}] = opts[:headers]
+      assert req_token == context.opts[:token]
+      {:ok, @no_artifacts_response}
+    end)
+
+    reject(&HTTPClient.download/3)
+
+    assert {:error, "No release artifacts"} =
+             GithubAPI.get({context.repo, opts}, @invalid_download_path)
+  end
+
   test "GITHUB_TOKEN takes precedence", context do
     env_token = "look-at-me!"
     gh_token = "dont-look-at-me!"
@@ -138,8 +154,7 @@ defmodule Nerves.Artifact.Resolvers.GithubAPITest do
 
     HTTPClient
     |> expect(:get, fn _url, opts ->
-      [{"Authorization", "Basic " <> encoded}] = opts[:headers]
-      [_, req_token] = String.split(Base.decode64!(encoded), ":")
+      [{"Authorization", "Bearer " <> req_token}] = opts[:headers]
       assert req_token == env_token
       {:ok, @no_artifacts_response}
     end)
@@ -162,12 +177,7 @@ defmodule Nerves.Artifact.Resolvers.GithubAPITest do
 
     HTTPClient
     |> expect(:get, fn _url, opts ->
-      # A bit hacky since you need to know the internals, but this
-      # breaks apart the Authorization header that was created with
-      # the token given to the request and confirms it is the one
-      # we wanted
-      [{"Authorization", "Basic " <> encoded}] = opts[:headers]
-      [_, req_token] = String.split(Base.decode64!(encoded), ":")
+      [{"Authorization", "Bearer " <> req_token}] = opts[:headers]
       assert req_token == env_token
       {:ok, ""}
     end)

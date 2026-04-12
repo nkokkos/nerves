@@ -347,8 +347,8 @@ retrieve it in the `artifacts_sites` list of the `nerves_package` config.
 There are currently five different artifact site helpers:
 
 - `{:github_releases, "organization/repo"}`
-- `{:github_api, "organization/repo", username: "", token: "", tag: ""}`
-- `{:gitea_releases, "site/organization/repo}`
+- `{:github_api, "organization/repo", token: "", tag: ""}`
+- `{:gitea_releases, "site/organization/repo"}`
 - `{:gitea_api, "organization/repo", base_url: "https://gitea.com/", token: "", tag: ""}`
 - `{:prefix, "url", opts \\ []}`
 
