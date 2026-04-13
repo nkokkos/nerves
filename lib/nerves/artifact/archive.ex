@@ -13,7 +13,7 @@ defmodule Nerves.Artifact.Archive do
   """
   @spec supported_extensions() :: [String.t()]
   def supported_extensions() do
-    [".tar.gz", ".tar.xz"]
+    [".tar.gz", ".tar.xz", ".tar.zst"]
   end
 
   @doc """
@@ -46,7 +46,37 @@ defmodule Nerves.Artifact.Archive do
     case detect_compression(path) do
       :xz -> cmd("xz", ["-t", path]) |> result()
       :gzip -> cmd("gzip", ["-t", path]) |> result()
+      :zstd -> cmd("zstd", ["-tq", path]) |> result()
       _other -> {:error, "Unsupported artifact format for #{path}"}
+    end
+  end
+
+  @doc """
+  Validate all archives in a directory
+
+  Returns a list of `{path, {:error, reason}}` tuples for any corrupt files.
+  An empty list means all files are valid.
+  """
+  @spec validate_dir(String.t()) :: [{String.t(), {:error, String.t()}}]
+  def validate_dir(dir) do
+    Path.join(dir, "*.tar.*")
+    |> Path.wildcard()
+    |> Enum.reduce([], fn path, acc ->
+      case validate(path) do
+        :ok -> acc
+        {:error, _} = err -> [{path, err} | acc]
+      end
+    end)
+  end
+
+  defp detect_compression(path) do
+    with {:ok, fd} <- File.open(path, [:read, :binary]),
+         bytes when is_binary(bytes) <- IO.binread(fd, 6),
+         :ok <- File.close(fd) do
+      compression_from_magic_bytes(bytes)
+    else
+      {:error, reason} -> {:error, reason}
+      _ -> {:error, :read_failed}
     end
   end
 
@@ -58,16 +88,6 @@ defmodule Nerves.Artifact.Archive do
       System.cmd(cmd, args, stderr_to_stdout: true)
     else
       raise "Could not find '#{cmd}'. See https://hexdocs.pm/nerves/installation.html for required packages."
-    end
-  end
-
-  defp detect_compression(path) do
-    with {:ok, fd} <- File.open(path, [:read, :binary]),
-         bytes <- IO.binread(fd, 6),
-         :ok <- File.close(fd) do
-      compression_from_magic_bytes(bytes)
-    else
-      _ -> :error
     end
   end
 

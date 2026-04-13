@@ -1,3 +1,5 @@
+# SPDX-FileCopyrightText: None
+# SPDX-License-Identifier: CC0-1.0
 version = 1
 
 [[annotations]]
@@ -6,7 +8,6 @@ path = [
  "CODE_REVIEW.md",
  "NOTICE",
  "RELEASE.md",
- "REUSE.toml",
  "mix.exs",
  "mix.lock"
 ]
@@ -66,11 +67,15 @@ path = [
  "test/fixtures/package_build_runner_opts/mix.exs",
  "test/fixtures/package_build_runner_opts/nerves_defconfig",
  "test/fixtures/package_build_runner_opts/VERSION",
- "test/fixtures/resolver/artifact.tar.gz",
- "test/fixtures/resolver/corrupt.tar.gz",
  "test/fixtures/package/mix.exs",
  "test/fixtures/package/nerves_defconfig",
  "test/fixtures/package/VERSION",
+ "test/fixtures/resolver/artifact.tar.gz",
+ "test/fixtures/resolver/artifact.tar.xz",
+ "test/fixtures/resolver/artifact.tar.zst",
+ "test/fixtures/resolver/corrupt.tar.gz",
+ "test/fixtures/resolver/corrupt.tar.xz",
+ "test/fixtures/resolver/corrupt.tar.zst",
  "test/fixtures/simple_app_artifact/mix.exs",
  "test/fixtures/toolchain/darwin_defconfig",
  "test/fixtures/toolchain/mix.exs",
