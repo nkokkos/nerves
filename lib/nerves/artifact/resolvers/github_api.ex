@@ -75,9 +75,9 @@ defmodule Nerves.Artifact.Resolvers.GithubAPI do
   end
 
   defp release_details(opts) do
-    case HTTPClient.get(opts.url, headers: opts.headers, progress?: false) do
-      {:ok, data} ->
-        Jason.decode(data)
+    case HTTPClient.get_json(opts.url, headers: opts.headers) do
+      {:ok, _} = ok ->
+        ok
 
       {:error, "Status 403 rate limit exceeded"} when opts.public? ->
         # Apparently this user has made too many public API requests from their IP

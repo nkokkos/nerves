@@ -84,9 +84,9 @@ defmodule Nerves.Artifact.Resolvers.GiteaAPI do
   end
 
   defp release_details(opts) do
-    case HTTPClient.get(opts.url, headers: opts.headers, progress?: false) do
-      {:ok, data} ->
-        Jason.decode(data)
+    case HTTPClient.get_json(opts.url, headers: opts.headers) do
+      {:ok, _} = ok ->
+        ok
 
       {:error, "Status 404 Not Found"} ->
         invalid_token? = is_nil(opts.token) or opts.token == ""

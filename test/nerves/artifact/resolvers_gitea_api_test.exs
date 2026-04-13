@@ -13,7 +13,7 @@ defmodule Nerves.Artifact.Resolvers.GiteaAPITest do
   @invalid_download_path "/should_not_work.tgz"
   @good_download_path "good_path.tar.gz"
 
-  @no_artifacts_response Jason.encode!(%{assets: []})
+  @no_artifacts_response %{"assets" => []}
 
   setup do
     # Clean up any environment settings that affect tests. This should never
@@ -33,7 +33,7 @@ defmodule Nerves.Artifact.Resolvers.GiteaAPITest do
   end
 
   test "public release not found", context do
-    HTTPClient |> expect(:get, fn _url, _opts -> {:error, "Status 404 Not Found"} end)
+    HTTPClient |> expect(:get_json, fn _url, _opts -> {:error, "Status 404 Not Found"} end)
 
     opts =
       context.opts
@@ -44,14 +44,14 @@ defmodule Nerves.Artifact.Resolvers.GiteaAPITest do
   end
 
   test "private release not found", context do
-    HTTPClient |> expect(:get, fn _url, _opts -> {:error, "Status 404 Not Found"} end)
+    HTTPClient |> expect(:get_json, fn _url, _opts -> {:error, "Status 404 Not Found"} end)
 
     assert GiteaAPI.get({context.repo, context.opts}, @invalid_download_path) ==
              {:error, "No release"}
   end
 
   test "private release fails without token", context do
-    HTTPClient |> expect(:get, fn _url, _opts -> {:error, "Status 404 Not Found"} end)
+    HTTPClient |> expect(:get_json, fn _url, _opts -> {:error, "Status 404 Not Found"} end)
 
     opts = Keyword.delete(context.opts, :token)
 
@@ -69,7 +69,7 @@ defmodule Nerves.Artifact.Resolvers.GiteaAPITest do
   end
 
   test "private release fails with nil token", context do
-    HTTPClient |> expect(:get, fn _url, _opts -> {:error, "Status 404 Not Found"} end)
+    HTTPClient |> expect(:get_json, fn _url, _opts -> {:error, "Status 404 Not Found"} end)
 
     opts = Keyword.put(context.opts, :token, nil)
 
@@ -87,8 +87,8 @@ defmodule Nerves.Artifact.Resolvers.GiteaAPITest do
   end
 
   test "mismatched checksum", context do
-    details = Jason.encode!(%{assets: [%{name: "howdy.tar.xz"}]})
-    HTTPClient |> expect(:get, fn _url, _opts -> {:ok, details} end)
+    details = %{"assets" => [%{"name" => "howdy.tar.xz"}]}
+    HTTPClient |> expect(:get_json, fn _url, _opts -> {:ok, details} end)
     reject(&HTTPClient.download/3)
 
     assert {:error, msg} = GiteaAPI.get({context.repo, context.opts}, @invalid_download_path)
@@ -100,7 +100,7 @@ defmodule Nerves.Artifact.Resolvers.GiteaAPITest do
   end
 
   test "no artifacts in release", context do
-    HTTPClient |> expect(:get, fn _url, _opts -> {:ok, @no_artifacts_response} end)
+    HTTPClient |> expect(:get_json, fn _url, _opts -> {:ok, @no_artifacts_response} end)
     reject(&HTTPClient.download/3)
 
     assert {:error, "No release artifacts"} =
@@ -110,16 +110,20 @@ defmodule Nerves.Artifact.Resolvers.GiteaAPITest do
   test "valid artifact", context do
     artifact_url = "http://example.com"
 
-    details =
-      Jason.encode!(%{
-        assets: [%{name: context.opts[:artifact_name], browser_download_url: artifact_url}]
-      })
+    details = %{
+      "assets" => [
+        %{
+          "name" => context.opts[:artifact_name],
+          "browser_download_url" => artifact_url
+        }
+      ]
+    }
 
     expected_details_url =
       "https://gitea.com/api/v1/repos/#{context.repo}/releases/tags/#{context.opts[:tag]}"
 
     HTTPClient
-    |> expect(:get, fn url, _opts ->
+    |> expect(:get_json, fn url, _opts ->
       assert url == expected_details_url
       {:ok, details}
     end)
@@ -139,7 +143,7 @@ defmodule Nerves.Artifact.Resolvers.GiteaAPITest do
     refute context.opts[:token] == gitea_token
 
     HTTPClient
-    |> expect(:get, fn _url, opts ->
+    |> expect(:get_json, fn _url, opts ->
       [{"Authorization", "token " <> req_token}] = opts[:headers]
       assert req_token == env_token
       {:ok, @no_artifacts_response}

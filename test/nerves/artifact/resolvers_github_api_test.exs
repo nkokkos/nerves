@@ -13,7 +13,7 @@ defmodule Nerves.Artifact.Resolvers.GithubAPITest do
   @invalid_download_path "/should_not_work.tgz"
   @good_download_path "good_path.tar.gz"
 
-  @no_artifacts_response Jason.encode!(%{assets: []})
+  @no_artifacts_response %{"assets" => []}
 
   setup do
     # Clean up any environment settings that affect tests. These should never
@@ -33,7 +33,7 @@ defmodule Nerves.Artifact.Resolvers.GithubAPITest do
   end
 
   test "public release not found", context do
-    HTTPClient |> expect(:get, fn _url, _opts -> {:error, "Status 404 Not Found"} end)
+    HTTPClient |> expect(:get_json, fn _url, _opts -> {:error, "Status 404 Not Found"} end)
 
     opts =
       context.opts
@@ -44,14 +44,14 @@ defmodule Nerves.Artifact.Resolvers.GithubAPITest do
   end
 
   test "private release not found", context do
-    HTTPClient |> expect(:get, fn _url, _opts -> {:error, "Status 404 Not Found"} end)
+    HTTPClient |> expect(:get_json, fn _url, _opts -> {:error, "Status 404 Not Found"} end)
 
     assert GithubAPI.get({context.repo, context.opts}, @invalid_download_path) ==
              {:error, "No release"}
   end
 
   test "private release fails without token", context do
-    HTTPClient |> expect(:get, fn _url, _opts -> {:error, "Status 404 Not Found"} end)
+    HTTPClient |> expect(:get_json, fn _url, _opts -> {:error, "Status 404 Not Found"} end)
 
     opts = Keyword.delete(context.opts, :token)
 
@@ -69,7 +69,7 @@ defmodule Nerves.Artifact.Resolvers.GithubAPITest do
   end
 
   test "private release fails with nil token", context do
-    HTTPClient |> expect(:get, fn _url, _opts -> {:error, "Status 404 Not Found"} end)
+    HTTPClient |> expect(:get_json, fn _url, _opts -> {:error, "Status 404 Not Found"} end)
 
     opts = Keyword.put(context.opts, :token, nil)
 
@@ -87,8 +87,8 @@ defmodule Nerves.Artifact.Resolvers.GithubAPITest do
   end
 
   test "mismatched checksum", context do
-    details = Jason.encode!(%{assets: [%{name: "howdy.tar.xz"}]})
-    HTTPClient |> expect(:get, fn _url, _opts -> {:ok, details} end)
+    details = %{"assets" => [%{"name" => "howdy.tar.xz"}]}
+    HTTPClient |> expect(:get_json, fn _url, _opts -> {:ok, details} end)
     reject(&HTTPClient.download/3)
 
     assert {:error, msg} = GithubAPI.get({context.repo, context.opts}, @invalid_download_path)
@@ -100,7 +100,7 @@ defmodule Nerves.Artifact.Resolvers.GithubAPITest do
   end
 
   test "no artifacts in release", context do
-    HTTPClient |> expect(:get, fn _url, _opts -> {:ok, @no_artifacts_response} end)
+    HTTPClient |> expect(:get_json, fn _url, _opts -> {:ok, @no_artifacts_response} end)
     reject(&HTTPClient.download/3)
 
     assert {:error, "No release artifacts"} =
@@ -110,14 +110,15 @@ defmodule Nerves.Artifact.Resolvers.GithubAPITest do
   test "valid artifact", context do
     artifact_url = "http://example.com"
 
-    details =
-      Jason.encode!(%{assets: [%{name: context.opts[:artifact_name], url: artifact_url}]})
+    details = %{
+      "assets" => [%{"name" => context.opts[:artifact_name], "url" => artifact_url}]
+    }
 
     expected_details_url =
       "https://api.github.com/repos/#{context.repo}/releases/tags/#{context.opts[:tag]}"
 
     HTTPClient
-    |> expect(:get, fn url, _opts ->
+    |> expect(:get_json, fn url, _opts ->
       assert url == expected_details_url
       {:ok, details}
     end)
@@ -134,7 +135,7 @@ defmodule Nerves.Artifact.Resolvers.GithubAPITest do
     opts = Keyword.put(context.opts, :username, "old_basic_auth_username")
 
     HTTPClient
-    |> expect(:get, fn _url, opts ->
+    |> expect(:get_json, fn _url, opts ->
       [{"Authorization", "Bearer " <> req_token}] = opts[:headers]
       assert req_token == context.opts[:token]
       {:ok, @no_artifacts_response}
@@ -153,7 +154,7 @@ defmodule Nerves.Artifact.Resolvers.GithubAPITest do
     refute context.opts[:token] == gh_token
 
     HTTPClient
-    |> expect(:get, fn _url, opts ->
+    |> expect(:get_json, fn _url, opts ->
       [{"Authorization", "Bearer " <> req_token}] = opts[:headers]
       assert req_token == env_token
       {:ok, @no_artifacts_response}
@@ -176,16 +177,19 @@ defmodule Nerves.Artifact.Resolvers.GithubAPITest do
     refute context.opts[:token] == env_token
 
     HTTPClient
-    |> expect(:get, fn _url, opts ->
+    |> expect(:get_json, fn _url, opts ->
       [{"Authorization", "Bearer " <> req_token}] = opts[:headers]
       assert req_token == env_token
-      {:ok, ""}
+      {:ok, @no_artifacts_response}
     end)
 
     reject(&HTTPClient.download/3)
 
     System.put_env("GH_TOKEN", env_token)
-    _ = GithubAPI.get({context.repo, context.opts}, @invalid_download_path)
+
+    {:error, "No release artifacts"} =
+      GithubAPI.get({context.repo, context.opts}, @invalid_download_path)
+
     System.delete_env("GH_TOKEN")
   end
 
@@ -202,7 +206,7 @@ defmodule Nerves.Artifact.Resolvers.GithubAPITest do
       "https://github.com/#{context.repo}/releases/download/#{opts[:tag]}/#{opts[:artifact_name]}"
 
     HTTPClient
-    |> expect(:get, fn url, _opts ->
+    |> expect(:get_json, fn url, _opts ->
       assert url == expected_details_url
       {:error, "Status 403 rate limit exceeded"}
     end)
@@ -216,7 +220,9 @@ defmodule Nerves.Artifact.Resolvers.GithubAPITest do
   end
 
   test "private release fails when API rate limit reached", context do
-    HTTPClient |> expect(:get, fn _url, _opts -> {:error, "Status 403 rate limit exceeded"} end)
+    HTTPClient
+    |> expect(:get_json, fn _url, _opts -> {:error, "Status 403 rate limit exceeded"} end)
+
     reject(&HTTPClient.download/3)
 
     assert {:error, "Status 403 rate limit exceeded"} =
