@@ -9,6 +9,11 @@ defmodule Nerves.Utils.HTTPClientTest do
 
   alias Nerves.Utils.HTTPClient
 
+  setup_all do
+    pid = start_supervised!(Nerves.TestServer.Router)
+    [server: pid]
+  end
+
   setup do
     _ = :inets.start(:httpc, profile: :nerves)
 
@@ -70,5 +75,28 @@ defmodule Nerves.Utils.HTTPClientTest do
              {:proxy, {{~c"http_proxy.com", 80}, []}},
              {:https_proxy, {{~c"https_proxy.com", 443}, []}}
            ]
+  end
+
+  test "get_json decodes a valid JSON response" do
+    assert {:ok, %{"hello" => "world", "number" => 42}} =
+             HTTPClient.get_json("http://127.0.0.1:4000/json/ok")
+  end
+
+  test "get_json returns error on invalid JSON" do
+    assert {:error, _} = HTTPClient.get_json("http://127.0.0.1:4000/json/invalid")
+  end
+
+  test "get_json returns error on HTTP failure" do
+    assert {:error, "Status 404 Not Found"} =
+             HTTPClient.get_json("http://127.0.0.1:4000/json/not_found")
+  end
+
+  test "get_json passes custom headers" do
+    # The /json/ok endpoint doesn't check headers, but this verifies
+    # the headers option is accepted and doesn't break the request
+    assert {:ok, %{"hello" => "world"}} =
+             HTTPClient.get_json("http://127.0.0.1:4000/json/ok",
+               headers: [{"X-Custom", "test"}]
+             )
   end
 end

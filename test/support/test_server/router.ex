@@ -11,9 +11,14 @@ defmodule Nerves.TestServer.Router do
   plug(:match)
   plug(:dispatch)
 
-  @spec start_link() :: GenServer.on_start()
-  def start_link() do
-    Bandit.start_link(plug: Nerves.TestServer.Router, port: 4000)
+  @spec child_spec(keyword()) :: Supervisor.child_spec()
+  def child_spec(_options) do
+    bandit_opts = [plug: Nerves.TestServer.Router, port: 4000]
+
+    %{
+      id: Nerves.TestServer.Router,
+      start: {Bandit, :start_link, [bandit_opts]}
+    }
   end
 
   get "/no_auth/*_" do
@@ -57,6 +62,24 @@ defmodule Nerves.TestServer.Router do
 
   get "/corrupt/*_" do
     send_file(conn, 200, System.get_env("TEST_ARTIFACT_TAR_CORRUPT"))
+  end
+
+  get "/json/ok" do
+    conn
+    |> put_resp_content_type("application/json")
+    |> send_resp(200, Jason.encode!(%{hello: "world", number: 42}))
+  end
+
+  get "/json/invalid" do
+    conn
+    |> put_resp_content_type("application/json")
+    |> send_resp(200, "not valid json{{{")
+  end
+
+  get "/json/not_found" do
+    conn
+    |> send_resp(404, "Not Found")
+    |> Plug.Conn.halt()
   end
 
   match _ do

@@ -74,7 +74,35 @@ defmodule Nerves.Utils.HTTPClient do
   end
 
   @doc """
-  Make an HTTP GET request and collect the response body.
+  Make an HTTP GET request and decode the JSON response
+
+  Takes the same options as `get/2` except `:into` will be overwritten.
+
+  Returns `{:ok, decoded_json}` or `{:error, reason}`.
+  """
+  @spec get_json(URI.t() | String.t(), keyword()) ::
+          {:ok, term()} | {:error, String.t() | :too_many_redirects | atom()}
+  def get_json(url, opts \\ []) do
+    headers = Keyword.get(opts, :headers, [])
+
+    opts =
+      opts
+      |> Keyword.put(:headers, [{"Accept", "application/json"} | headers])
+      |> Keyword.put(:into, "")
+
+    with {:ok, body} <- get(url, opts) do
+      decode_json(body)
+    end
+  end
+
+  defp decode_json(s) do
+    with {:error, reason} <- Jason.decode(s) do
+      {:error, Exception.message(reason)}
+    end
+  end
+
+  @doc """
+  Make an HTTP GET request and collect the response body
 
   Options:
   * `:into` - a `Collectable.t()` for receiving the results. Defaults to `""`

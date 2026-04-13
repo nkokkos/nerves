@@ -10,7 +10,7 @@ defmodule Nerves.Artifact.ResolverTest do
   alias Nerves.Artifact
 
   setup_all do
-    {:ok, pid} = Nerves.TestServer.Router.start_link()
+    pid = start_supervised!(Nerves.TestServer.Router)
     [server: pid]
   end
 
