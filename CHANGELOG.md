@@ -5,6 +5,27 @@
 
 # Changelog
 
+## v1.14.0 - 2026-04-17
+
+This release includes significant internal changes to artifact download logic.
+No support was intentionally broken, but less common artifact download
+support, such as Gitea artifact downloads, might have regressed due to
+reduced test coverage. Please report if you're affected.
+
+* Changes
+  * Requests to GitHub authenticate if an auth token is available even for
+    public downloads. This avoids API rate limit issues and makes Nerves more
+    forgiving if you change your Nerves system repository to private.
+  * Use GitHub Bearer authentication instead of basic auth
+  * Remove `:username` from the `:github_api` site method. It hasn't been used
+    for a long time.
+  * Default the GitHub release tag to `v#{version}` for `:github_api` site
+    downloads just like is done for `:github_release` site downloads. If you
+    don't use the `v` notation, you can set the `:tag` as previously done.
+  * Fall back to using the GitHub CLI if available to determine the auth token.
+    This is the final method. Environment variables like `GITHUB_API_TOKEN` and
+    customized Nerves system token overrides take precedence.
+
 ## v1.13.2 - 2026-03-19
 
 This release starts a process of modernizing the Nerves tooling. Most updates
