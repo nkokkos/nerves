@@ -5,6 +5,16 @@
 
 # Changelog
 
+## v1.14.1 - 2026-04-22
+
+This release makes `mix nerves.system.shell` work again. We still recommend
+using the system shell for simple Nerves system changes. Please refer to the
+Nerves documentation for working with Nerves systems.
+
+* Changes
+  * Delete code for OTP 25 and earlier. Nerves requires OTP 26+, but OTP
+    25-supporting code hadn't been deleted.
+
 ## v1.14.0 - 2026-04-17
 
 This release includes significant internal changes to artifact download logic.
