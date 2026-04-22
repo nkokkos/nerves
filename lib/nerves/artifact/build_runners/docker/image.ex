@@ -51,7 +51,7 @@ defmodule Nerves.Artifact.BuildRunners.Docker.Image do
     cmd = "docker"
     args = ["image", "ls", "#{tag}", "-q"]
 
-    case Nerves.Port.cmd(cmd, args, stderr_to_stdout: true) do
+    case System.cmd(cmd, args, stderr_to_stdout: true) do
       {"", _} ->
         false
 
