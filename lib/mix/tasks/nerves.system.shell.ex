@@ -43,11 +43,6 @@ defmodule Mix.Tasks.Nerves.System.Shell do
   @doc false
   @spec run([String.t()]) :: :ok
   def run(_argv) do
-    # We unregister :user so that the process currently holding fd 0 (stdin)
-    # can't send an error message to the console when we steal it.
-    user = Process.whereis(:user)
-    Process.unregister(:user)
-
     # Start disabled so that we can configure the system before building it
     # for the first time.
     try do
@@ -75,9 +70,6 @@ defmodule Mix.Tasks.Nerves.System.Shell do
     {build_runner, _opts} = pkg.build_runner
 
     build_runner.system_shell(pkg)
-
-    # Set :user back to the real one
-    Process.register(user, :user)
 
     :ok
   end
