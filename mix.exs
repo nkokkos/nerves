@@ -46,7 +46,7 @@ defmodule Nerves.MixProject do
   defp deps do
     [
       {:elixir_make, "~> 0.6", runtime: false},
-      {:interactive_cmd, "~> 0.1.2"},
+      {:interactive_cmd, "~> 0.1.4"},
       {:jason, "~> 1.2"},
       {:nerves_discovery, "~> 0.1.2"},
       {:tablet, "~> 0.3.1"},
